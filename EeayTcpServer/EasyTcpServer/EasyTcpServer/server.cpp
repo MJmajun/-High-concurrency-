@@ -117,23 +117,24 @@ int main()
 
 	while (true)
 	{
-		DataHeader header = {};
-		int len = recv(_cSock,(char*)& header,sizeof(DataHeader),0);
+		//缓冲区
+		char szRecv[1024] = {};	
+		int len = recv(_cSock,szRecv,sizeof(DataHeader),0);
+		DataHeader* header = (DataHeader*)szRecv;
 		if (len <= 0)
 		{
 			printf("客户端已经退出，任务结束\n");
 			break;
 		}
 
-		switch (header.cmd)
+		switch (header->cmd)
 		{
 			case CMD_LOGIN:
 			{
-				Login login = {};
-
 				//注意 这里为什么要加 sizeof(DataHeader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
-				recv(_cSock, (char*)& login+sizeof(DataHeader), sizeof(Login)-sizeof(DataHeader), 0);
-				printf("收到命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n",login.dataLength,login.userName,login.passWord);
+				recv(_cSock, szRecv+ sizeof(DataHeader), header->dataLength -sizeof(DataHeader), 0);
+				Login *login = (Login*)szRecv;
+				printf("收到命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n",login->dataLength,login->userName,login->passWord);
 				//忽略用户密码是否正确的过程
 				LoginResult ret;			
 				send(_cSock,(char*)&ret,sizeof(LoginResult),0 );
@@ -141,17 +142,16 @@ int main()
 			}
 			case CMD_LOGOUT :
 			{
-				Logout logout = {};
-				recv(_cSock, (char*)& logout+sizeof(DataHeader), sizeof(Logout)-sizeof(DataHeader), 0);
-				printf("收到命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n", logout.dataLength,logout.username);
+				Logout *logout=(Logout*)szRecv;
+				recv(_cSock, szRecv+sizeof(DataHeader), header->dataLength -sizeof(DataHeader), 0);
+				printf("收到命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n", logout->dataLength,logout->username);
 				//忽略用户密码是否正确的过程
 				LogoutResult ret;		
 				send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
 				break;
 			}
 			default:
-				header.cmd = CMD_ERROR;
-				header.dataLength = 0;
+				DataHeader header = { 0,CMD_ERROR };
 				send(_cSock,(char*)&header,sizeof(header),0);
 				break;
 		}
