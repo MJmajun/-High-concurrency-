@@ -6,6 +6,12 @@
 
 
 //#pragma comment(lib,"ws2_32.lib");	//解决库调用  我们用通用的方法 已经在属性中添加了
+
+struct DatePackage	//定义一个结构体封装数据
+{
+	int age;
+	char name[32];
+};
 int main()
 {
 	//启动window socket 环境
@@ -66,21 +72,16 @@ int main()
 			printf("客户端已经退出，任务结束\n");
 			break;
 		}
+		printf("收到命令：%s \n",_recvBuf);
 
-		if ( 0 == strcmp(_recvBuf,"getName"))
+		 if (0 == strcmp(_recvBuf, "getInfo"))
 		{
-			//就向客户端发送一条数据
-			char msgBuf[] = "MaJun";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
-		}
-		else if (0 == strcmp(_recvBuf, "getAge"))
-		{
-			char msgBuf[] = "23";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
+			DatePackage dp = {23,"马俊"};
+			send(_cSock, (const char*)&dp, sizeof(DatePackage), 0);
 		}
 		else
 		{
-			char msgBuf[] = "hello,im server ...  ????";
+			char msgBuf[] = "你输入的是什么命令 ????";
 			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 		}
 	}

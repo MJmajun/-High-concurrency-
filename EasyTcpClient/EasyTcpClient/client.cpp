@@ -6,6 +6,12 @@
 
 
 //#pragma comment(lib,"ws2_32.lib");	//解决库调用  我们用通用的方法 已经在属性中添加了
+
+struct DatePackage
+{
+	int age;
+	char name[32];
+};
 int main()
 {
 	//启动window socket 环境
@@ -58,7 +64,8 @@ int main()
 		int nlen = recv(_sock,recvBuf,128,0 );
 		if(nlen>0)
 		{
-			printf("接收到数据： %s",recvBuf);
+			DatePackage* dp = (DatePackage*)recvBuf;
+			printf("接收到数据： 年龄：%d  名字：%s\n",dp->age,dp->name);
 		}
 	}
 	
