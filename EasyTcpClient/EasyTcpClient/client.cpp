@@ -6,37 +6,59 @@
 
 
 //#pragma comment(lib,"ws2_32.lib");	//解决库调用  我们用通用的方法 已经在属性中添加了
-
 enum CMD	//枚举登录和登出
 {
 	CMD_LOGIN,
+	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
+	CMD_LOGOUT_RESULT,
 	CMD_ERROR
 };
-
 struct DataHeader	//定义数据包头
 {
 	short dataLength;
 	short cmd;
 };
 
-struct Login	//DatePackage	//定义一个结构体封装数据
+struct Login : public DataHeader		//定义一个结构体封装数据
 {
+	Login()
+	{
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
 	char userName[32];
 	char passWord[32];
 };
 
-struct LoginResult		//返回登录的结果
+struct LoginResult : public DataHeader	//返回登录的结果
 {
+	LoginResult()
+	{
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 1;
+	}
 	int result;
 };
 
-struct Logout		//返回谁要退出
+struct Logout : public DataHeader		//返回谁要退出
 {
+	Logout()
+	{
+		dataLength = sizeof(Logout);
+		cmd = CMD_LOGOUT;
+	}
 	char username[32];
 };
-struct LogoutResult		//返回登出的结果
+struct LogoutResult : public DataHeader		//返回登出的结果
 {
+	LogoutResult()
+	{
+		dataLength = sizeof(LogoutResult);
+		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
 	int result;
 };
 int main()
@@ -83,33 +105,27 @@ int main()
 		}
 		else if (0 == strcmp(cmdBuf, "Login"))
 		{
-			Login login = { "majun","5188119" };
-			DataHeader dh = { sizeof(login),CMD_LOGIN };
+			Login login;
+			strcpy(login.userName,"majun");
+			strcpy(login.passWord,"5188119");
+
 			//5、向服务器发送请求
-			send(_sock, (const char *)&dh, sizeof(dh), 0);	//先发包头
 			send(_sock, (const char *)&login, sizeof(login), 0);	//再发包体
 
 			//再进行接受
-			DataHeader retHeader = {};
 			LoginResult loginret = {};
-
-			recv(_sock,(char*)&retHeader,sizeof(retHeader),0 );
 			recv(_sock, (char*)&loginret, sizeof(loginret), 0);
 			printf("LoginResult = %d\n ",loginret.result);
 		}
 		else if (0 == strcmp(cmdBuf, "Logout"))
 		{
-			Logout logout = { "majun" };
-			DataHeader dh = { sizeof(logout),CMD_LOGOUT };
+			Logout logout;
+			strcpy(logout.username,"majun");
 			//5、向服务器发送请求
-			send(_sock, (const char *)&dh, sizeof(dh), 0);	//先发包头
 			send(_sock, (const char *)&logout, sizeof(logout), 0);	//再发包体
 
-																	//再进行接受
-			DataHeader retHeader = {};
-			LogoutResult logoutret = {};
-
-			recv(_sock, (char*)&retHeader, sizeof(retHeader), 0);
+			//再进行接受	
+			LogoutResult logoutret = {};			
 			recv(_sock, (char*)&logoutret, sizeof(logoutret), 0);
 			printf("LoginResult = %d\n ", logoutret.result);
 		}
@@ -124,5 +140,3 @@ int main()
 	getchar();
 	return 0;
 }
-
-

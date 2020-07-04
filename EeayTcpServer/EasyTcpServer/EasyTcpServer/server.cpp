@@ -9,7 +9,9 @@
 enum CMD	//枚举登录和登出
 {
 	CMD_LOGIN,
+	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
+	CMD_LOGOUT_RESULT,
 	CMD_ERROR
 };
 
@@ -19,23 +21,45 @@ struct DataHeader	//定义数据包头
 	short cmd;
 };
 
-struct Login	//DatePackage	//定义一个结构体封装数据
+struct Login : public DataHeader		//定义一个结构体封装数据
 {
+	Login()
+	{
+		dataLength = sizeof(Login);
+		cmd = CMD_LOGIN;
+	}
 	char userName[32];
 	char passWord[32];
 };
 
-struct LoginResult		//返回登录的结果
+struct LoginResult : public DataHeader	//返回登录的结果
 {
+	LoginResult()
+	{
+		dataLength = sizeof(LoginResult);
+		cmd = CMD_LOGIN_RESULT;
+		result = 1;
+	}
 	int result;
 };
 
-struct Logout		//返回谁要退出
+struct Logout : public DataHeader		//返回谁要退出
 {
+	Logout()
+	{
+		dataLength = sizeof(Logout);
+		cmd = CMD_LOGOUT;
+	}
 	char username[32];
 };
-struct LogoutResult		//返回登出的结果
+struct LogoutResult : public DataHeader		//返回登出的结果
 {
+	LogoutResult()
+	{
+		dataLength = sizeof(LogoutResult);
+		cmd = CMD_LOGOUT_RESULT;
+		result = 0;
+	}
 	int result;
 };
 
@@ -90,7 +114,7 @@ int main()
 		printf("监听端口成功...\n");
 	}
 	printf("新的客户端加入：IP = %s \n", inet_ntoa(clientAddr.sin_addr));
-	char _recvBuf[128] = {};
+
 	while (true)
 	{
 		DataHeader header = {};
@@ -100,27 +124,28 @@ int main()
 			printf("客户端已经退出，任务结束\n");
 			break;
 		}
-		printf("收到命令：%d 数据长度%d \n",header.cmd, header.dataLength);
 
 		switch (header.cmd)
 		{
 			case CMD_LOGIN:
 			{
 				Login login = {};
-				recv(_cSock, (char*)& login, sizeof(Login), 0);
+
+				//注意 这里为什么要加 sizeof(DataHeader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
+				recv(_cSock, (char*)& login+sizeof(DataHeader), sizeof(Login)-sizeof(DataHeader), 0);
+				printf("收到命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n",login.dataLength,login.userName,login.passWord);
 				//忽略用户密码是否正确的过程
-				LoginResult ret = { 1 };
-				send(_cSock, (const char*)&header, sizeof(DataHeader ), 0);	//发消息头
+				LoginResult ret;			
 				send(_cSock,(char*)&ret,sizeof(LoginResult),0 );
 				break;
 			}
 			case CMD_LOGOUT :
 			{
 				Logout logout = {};
-				recv(_cSock, (char*)& logout, sizeof(Logout), 0);
+				recv(_cSock, (char*)& logout+sizeof(DataHeader), sizeof(Logout)-sizeof(DataHeader), 0);
+				printf("收到命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n", logout.dataLength,logout.username);
 				//忽略用户密码是否正确的过程
-				LogoutResult ret = { 0 };
-				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);	//发消息头
+				LogoutResult ret;		
 				send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
 				break;
 			}
@@ -145,5 +170,3 @@ int main()
 	WSACleanup();
 	return 0;
 }
-
-
