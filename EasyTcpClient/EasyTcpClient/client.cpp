@@ -38,17 +38,32 @@ int main()
 	{
 		printf("连接Socket成功...\n");
 	}
-
-	//3、接收服务器信息
-	char recvBuf[256] = {};
-	int nlen = recv(_sock,recvBuf,256,0 );
-	if(nlen>0)
+	char cmdBuf[128] = {};
+	while (true)
 	{
-		printf("接收到数据： %s",recvBuf);
+		//3、输入请求命令
+		scanf("%s",cmdBuf);
+		//4、处理请求命令
+		if (0 == strcmp(cmdBuf,"exit"))
+		{
+			break;
+		}
+		else 
+		{
+			//5、向服务器发送请求
+			send(_sock,cmdBuf,strlen(cmdBuf)+1,0);
+		}
+		//6、接收服务器信息
+		char recvBuf[128] = {};
+		int nlen = recv(_sock,recvBuf,128,0 );
+		if(nlen>0)
+		{
+			printf("接收到数据： %s",recvBuf);
+		}
 	}
-
 	
 	WSACleanup();
+	closesocket(_sock);
 	getchar();
 	return 0;
 }

@@ -46,22 +46,43 @@ int main()
 	sockaddr_in clientAddr = {};
 	int nAddrLen = sizeof(sockaddr_in);
 	SOCKET _cSock = INVALID_SOCKET;
-	char msgBuf[] = "hello,im server";
+	
+	_cSock = accept(_sock, (sockaddr*)&clientAddr, &nAddrLen);
+	if (INVALID_SOCKET == _cSock)
+	{
+		printf("错误，接收到无效客户端...\n");
+	}
+	else
+	{
+		printf("监听端口成功...\n");
+	}
+	printf("新的客户端加入：IP = %s \n", inet_ntoa(clientAddr.sin_addr));
+	char _recvBuf[128] = {};
 	while (true)
 	{
-		_cSock = accept(_sock, (sockaddr*)&clientAddr, &nAddrLen);
-		if (INVALID_SOCKET == _cSock)
+		int len = recv(_cSock,_recvBuf,128,0);
+		if (len <= 0)
 		{
-			printf("错误，接收到无效客户端...\n");
+			printf("客户端已经退出，任务结束\n");
+			break;
+		}
+
+		if ( 0 == strcmp(_recvBuf,"getName"))
+		{
+			//就向客户端发送一条数据
+			char msgBuf[] = "MaJun";
+			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
+		}
+		else if (0 == strcmp(_recvBuf, "getAge"))
+		{
+			char msgBuf[] = "23";
+			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 		}
 		else
 		{
-			printf("监听端口成功...\n");
+			char msgBuf[] = "hello,im server ...  ????";
+			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 		}
-		printf("新的客户端加入：IP = %s \n", inet_ntoa(clientAddr.sin_addr));
-		//5、send 向客户端发送一条数据
-
-		send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
 	}
 
 
