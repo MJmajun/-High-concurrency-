@@ -4,14 +4,41 @@
 #include <windows.h>
 #include "stdio.h"
 
-
 //#pragma comment(lib,"ws2_32.lib");	//解决库调用  我们用通用的方法 已经在属性中添加了
 
-struct DatePackage	//定义一个结构体封装数据
+enum CMD	//枚举登录和登出
 {
-	int age;
-	char name[32];
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
 };
+
+struct DataHeader	//定义数据包头
+{
+	short dataLength;
+	short cmd;
+};
+
+struct Login	//DatePackage	//定义一个结构体封装数据
+{
+	char userName[32];
+	char passWord[32];
+};
+
+struct LoginResult		//返回登录的结果
+{
+	int result;
+};
+
+struct Logout		//返回谁要退出
+{
+	char username[32];
+};
+struct LogoutResult		//返回登出的结果
+{
+	int result;
+};
+
 int main()
 {
 	//启动window socket 环境
@@ -66,23 +93,42 @@ int main()
 	char _recvBuf[128] = {};
 	while (true)
 	{
-		int len = recv(_cSock,_recvBuf,128,0);
+		DataHeader header = {};
+		int len = recv(_cSock,(char*)& header,sizeof(DataHeader),0);
 		if (len <= 0)
 		{
 			printf("客户端已经退出，任务结束\n");
 			break;
 		}
-		printf("收到命令：%s \n",_recvBuf);
+		printf("收到命令：%d 数据长度%d \n",header.cmd, header.dataLength);
 
-		 if (0 == strcmp(_recvBuf, "getInfo"))
+		switch (header.cmd)
 		{
-			DatePackage dp = {23,"马俊"};
-			send(_cSock, (const char*)&dp, sizeof(DatePackage), 0);
-		}
-		else
-		{
-			char msgBuf[] = "你输入的是什么命令 ????";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);
+			case CMD_LOGIN:
+			{
+				Login login = {};
+				recv(_cSock, (char*)& login, sizeof(Login), 0);
+				//忽略用户密码是否正确的过程
+				LoginResult ret = { 1 };
+				send(_cSock, (const char*)&header, sizeof(DataHeader ), 0);	//发消息头
+				send(_cSock,(char*)&ret,sizeof(LoginResult),0 );
+				break;
+			}
+			case CMD_LOGOUT :
+			{
+				Logout logout = {};
+				recv(_cSock, (char*)& logout, sizeof(Logout), 0);
+				//忽略用户密码是否正确的过程
+				LogoutResult ret = { 0 };
+				send(_cSock, (const char*)&header, sizeof(DataHeader), 0);	//发消息头
+				send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
+				break;
+			}
+			default:
+				header.cmd = CMD_ERROR;
+				header.dataLength = 0;
+				send(_cSock,(char*)&header,sizeof(header),0);
+				break;
 		}
 	}
 
