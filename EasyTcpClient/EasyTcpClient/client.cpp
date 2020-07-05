@@ -12,8 +12,10 @@ enum CMD	//枚举登录和登出
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
+
 struct DataHeader	//定义数据包头
 {
 	short dataLength;
@@ -61,6 +63,58 @@ struct LogoutResult : public DataHeader		//返回登出的结果
 	}
 	int result;
 };
+struct NewUserJoin : public DataHeader		//新用户加入
+{
+	NewUserJoin()
+	{
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
+		scok = 0;
+	}
+	int scok;
+};
+
+int processor(SOCKET _cSock)
+{
+
+	//缓冲区
+	char szRecv[4096] = {};
+	int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+	DataHeader* header = (DataHeader*)szRecv;
+	if (len <= 0)
+	{
+		printf("与服务器断开连接，任务结束\n");
+		return -1;
+	}
+	switch (header->cmd)
+	{
+		
+		case CMD_LOGIN_RESULT:
+		{
+			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+			LoginResult *login = (LoginResult*)szRecv;
+			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", _cSock, header->dataLength);
+			
+			break;
+		}
+		case CMD_LOGOUT_RESULT:
+		{
+			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+			LogoutResult *logout = (LogoutResult*)szRecv;
+			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", _cSock, header->dataLength);
+			break;
+		}
+		case CMD_NEW_USER_JOIN:
+		{
+			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+			NewUserJoin *userjoin = (NewUserJoin*)szRecv;
+			printf("收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度%d \n", _cSock, header->dataLength);
+			break;
+		}
+	}
+	return 0;
+}
+
 int main()
 {
 	//启动window socket 环境
@@ -96,8 +150,36 @@ int main()
 	char cmdBuf[128] = {};
 	while (true)
 	{
+		fd_set fdRead;
+		FD_ZERO(&fdRead);
+		FD_SET(_sock,&fdRead);
+		timeval t = { 1,0 };//前面是秒 后面是毫秒
+		int ret = select(_sock,&fdRead,0,0,&t);
+		if (ret < 0)
+		{
+			printf("select 任务结束1");
+		}
+		if (FD_ISSET(_sock,&fdRead))
+		{
+			FD_CLR(_sock,&fdRead);
+			if (-1 == processor(_sock))
+			{
+				printf("select 任务结束2");
+				break;
+			}
+		}
+
+		//printf("空闲时间 做其他业务\n");
+		Login login;
+		strcpy(login.userName,"majun");
+		strcpy(login.passWord,"518811");
+		send(_sock,(const char*)&login,sizeof(Login),0);
+		Sleep(2000);
+		
+		/*
 		//3、输入请求命令
 		scanf("%s",cmdBuf);
+
 		//4、处理请求命令
 		if (0 == strcmp(cmdBuf,"exit"))
 		{
@@ -133,6 +215,7 @@ int main()
 		{
 			printf("不支持的命令，请重重新输入\n");
 		}
+		*/
 	}
 	
 	WSACleanup();

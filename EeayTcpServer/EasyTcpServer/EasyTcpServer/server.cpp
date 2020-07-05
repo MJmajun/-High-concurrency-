@@ -13,6 +13,7 @@ enum CMD	//枚举登录和登出
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 
@@ -63,6 +64,16 @@ struct LogoutResult : public DataHeader		//返回登出的结果
 	}
 	int result;
 };
+struct NewUserJoin : public DataHeader		//新用户加入
+{
+	NewUserJoin()
+	{
+		dataLength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
+		scok = 0;
+	}
+	int scok;
+};
 
 std::vector<SOCKET> g_clients;	//存放所有的socket
 
@@ -80,13 +91,13 @@ int processor(SOCKET _cSock)
 	}
 	switch (header->cmd)
 	{
-		printf("switch\n");
+		
 		case CMD_LOGIN:
 		{
 			//注意 这里为什么要加 sizeof(DataHeader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
 			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 			Login *login = (Login*)szRecv;
-			printf("收到命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n", login->dataLength, login->userName, login->passWord);
+			printf("收到客户端 %d 的命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n",_cSock, login->dataLength, login->userName, login->passWord);
 			//忽略用户密码是否正确的过程
 			LoginResult ret;
 			send(_cSock, (char*)&ret, sizeof(LoginResult), 0);
@@ -96,7 +107,7 @@ int processor(SOCKET _cSock)
 		{
 			Logout *logout = (Logout*)szRecv;
 			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-			printf("收到命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n", logout->dataLength, logout->username);
+			printf("收到客户端 %d 的命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n",_cSock, logout->dataLength, logout->username);
 			//忽略用户密码是否正确的过程
 			LogoutResult ret;
 			send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
@@ -168,7 +179,8 @@ int main()
 		}
 
 		//nfds是一个整数值，是指fd_set集合中所有描述符（socket）的范围，而不是数量，即是所有文件描述符最大值+1，再window中，该值可以写0
-		int ret = select(_sock+1,&fdRead,&fdWrite,&fdExp,NULL );
+		timeval t = { 1,0 };	//定时
+		int ret = select(_sock+1,&fdRead,&fdWrite,&fdExp,&t );
 		if (ret < 0)
 		{
 			printf("select 任务结束\n");
@@ -190,10 +202,17 @@ int main()
 			}
 			else
 			{
-				printf("监听端口成功...\n");
-			}			
+				printf("监听端口成功 \n");
+			}		
+			//新的客户端还没有加入到vector之后，就先群发给所有其他成员
+			for (int n = (int)g_clients.size() - 1; n >= 0; n--)
+			{
+				NewUserJoin userjoin;
+				send(g_clients[n],(const char*)&userjoin,sizeof(NewUserJoin),0);
+			}
+
 			g_clients.push_back(_cSock);	//新的套接字直接加入到动态数组中
-			printf("新的客户端加入：IP = %s \n", inet_ntoa(clientAddr.sin_addr));
+			printf("新的客户端加入：Socket = %d\t IP = %s \n", _cSock,inet_ntoa(clientAddr.sin_addr));
 			
 		}
 
@@ -209,6 +228,7 @@ int main()
 				}
 			}
 		}
+		printf("空闲时间处理其他业务\n");
 	}
 	for (int n = (int)g_clients.size() - 1; n >= 0; n--)
 	{
