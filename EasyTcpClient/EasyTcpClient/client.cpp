@@ -88,29 +88,29 @@ int processor(SOCKET _cSock)	//专门处理接受到的消息
 	}
 	switch (header->cmd)
 	{
-		
-		case CMD_LOGIN_RESULT:
-		{
-			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-			LoginResult *login = (LoginResult*)szRecv;
-			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", header->dataLength);
-			
-			break;
-		}
-		case CMD_LOGOUT_RESULT:
-		{
-			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-			LogoutResult *logout = (LogoutResult*)szRecv;
-			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", header->dataLength);
-			break;
-		}
-		case CMD_NEW_USER_JOIN:
-		{
-			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-			NewUserJoin *userjoin = (NewUserJoin*)szRecv;
-			printf("收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度%d \n", header->dataLength);
-			break;
-		}
+
+	case CMD_LOGIN_RESULT:
+	{
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		LoginResult *login = (LoginResult*)szRecv;
+		printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", header->dataLength);
+
+		break;
+	}
+	case CMD_LOGOUT_RESULT:
+	{
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		LogoutResult *logout = (LogoutResult*)szRecv;
+		printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", header->dataLength);
+		break;
+	}
+	case CMD_NEW_USER_JOIN:
+	{
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		NewUserJoin *userjoin = (NewUserJoin*)szRecv;
+		printf("收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度%d \n", header->dataLength);
+		break;
+	}
 	}
 	return 0;
 }
@@ -153,9 +153,9 @@ int main()
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
 	WSAStartup(ver, &dat);
-	
+
 	//1、建立一个套接字
-	SOCKET _sock = socket(AF_INET,SOCK_STREAM,0);
+	SOCKET _sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (INVALID_SOCKET == _sock)
 	{
 		printf("错误，建立Socket失败...\n");
@@ -181,24 +181,24 @@ int main()
 	}
 
 	//启动线程
-	std::thread t1(cmdThread,_sock);	//第一个是函数名 第二个就是要传入的参数
+	std::thread t1(cmdThread, _sock);	//第一个是函数名 第二个就是要传入的参数
 	t1.detach();		//和主线程进行分离  一定要进行分离，不然子线程的退出会直接导致主线程也退出，但是，主线程没有正常结束程序，就会产生问题
 	while (g_bRun)
 	{
-	    fd_set fdRead;
+		fd_set fdRead;
 		FD_ZERO(&fdRead);
-		FD_SET(_sock,&fdRead);
-		
+		FD_SET(_sock, &fdRead);
+
 		timeval t = { 1,0 };//前面是秒 后面是毫秒	让select每隔1秒去扫描一下
-		int ret = select(_sock,&fdRead,0,0,&t);
-		
+		int ret = select(_sock, &fdRead, 0, 0, &t);
+
 		if (ret < 0)
 		{
 			printf("select 任务结束1");
 		}
-		if (FD_ISSET(_sock,&fdRead))
+		if (FD_ISSET(_sock, &fdRead))
 		{
-			FD_CLR(_sock,&fdRead);
+			FD_CLR(_sock, &fdRead);
 			if (-1 == processor(_sock))
 			{
 				printf("select 任务结束2");
@@ -206,7 +206,7 @@ int main()
 			}
 		}
 	}
-	
+
 	WSACleanup();
 	closesocket(_sock);
 	getchar();

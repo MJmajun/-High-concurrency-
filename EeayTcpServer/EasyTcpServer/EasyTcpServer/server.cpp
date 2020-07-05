@@ -91,34 +91,34 @@ int processor(SOCKET _cSock)		//专门处理接受到的消息
 	}
 	switch (header->cmd)
 	{
-		
-		case CMD_LOGIN:
-		{
-			//注意 这里为什么要加 sizeof(DataHe ader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
-			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-			Login *login = (Login*)szRecv;
-			printf("收到客户端 %d 的命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n",_cSock, login->dataLength, login->userName, login->passWord);
-			//忽略用户密码是否正确的过程
-			LoginResult ret;
-			send(_cSock, (char*)&ret, sizeof(LoginResult), 0);
-			break;
-		}
-		case CMD_LOGOUT:
-		{
-			Logout *logout = (Logout*)szRecv;
-			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-			printf("收到客户端 %d 的命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n",_cSock, logout->dataLength, logout->username);
-			//忽略用户密码是否正确的过程
-			LogoutResult ret;
-			send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
-			break;
-		}
-		default:
-		{
-			DataHeader header = { 0,CMD_ERROR };
-			send(_cSock, (char*)&header, sizeof(header), 0);
-			break;
-		}
+
+	case CMD_LOGIN:
+	{
+		//注意 这里为什么要加 sizeof(DataHe ader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		Login *login = (Login*)szRecv;
+		printf("收到客户端 %d 的命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n", _cSock, login->dataLength, login->userName, login->passWord);
+		//忽略用户密码是否正确的过程
+		LoginResult ret;
+		send(_cSock, (char*)&ret, sizeof(LoginResult), 0);
+		break;
+	}
+	case CMD_LOGOUT:
+	{
+		Logout *logout = (Logout*)szRecv;
+		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
+		printf("收到客户端 %d 的命令：CMD_LOGOUT, 数据长度%d ,userName = %s\n", _cSock, logout->dataLength, logout->username);
+		//忽略用户密码是否正确的过程
+		LogoutResult ret;
+		send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
+		break;
+	}
+	default:
+	{
+		DataHeader header = { 0,CMD_ERROR };
+		send(_cSock, (char*)&header, sizeof(header), 0);
+		break;
+	}
 	}
 	return 0;
 }
@@ -170,28 +170,28 @@ int main()
 		FD_ZERO(&fdWrite);
 		FD_ZERO(&fdExp);
 
-		FD_SET(_sock,&fdRead);
-		FD_SET(_sock,&fdWrite);
-		FD_SET(_sock,&fdExp);
+		FD_SET(_sock, &fdRead);
+		FD_SET(_sock, &fdWrite);
+		FD_SET(_sock, &fdExp);
 
-		for (int n  =(int)g_clients.size()- 1;n>=0 ;n--)
+		for (int n = (int)g_clients.size() - 1; n >= 0; n--)
 		{
-			FD_SET(g_clients[n],&fdRead);
+			FD_SET(g_clients[n], &fdRead);
 		}
 
 		//nfds是一个整数值，是指fd_set集合中所有描述符（socket）的范围，而不是数量，即是所有文件描述符最大值+1，再window中，该值可以写0
 		timeval t = { 1,0 };	//定时
-		int ret = select(_sock+1,&fdRead,&fdWrite,&fdExp,&t );
+		int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, &t);
 		if (ret < 0)
 		{
 			printf("select 任务结束\n");
 			break;
 		}
-		if (FD_ISSET(_sock,&fdRead))	//FD_ISSET:判断一个文件描述符是否在一个集合中，返回值:在1,不在0
+		if (FD_ISSET(_sock, &fdRead))	//FD_ISSET:判断一个文件描述符是否在一个集合中，返回值:在1,不在0
 		{
-			FD_CLR(_sock,&fdRead);	//FD_CLR:将一个文件描述符从集合中移除
-			
-			//4、accept 等待接收客户端的连接
+			FD_CLR(_sock, &fdRead);	//FD_CLR:将一个文件描述符从集合中移除
+
+									//4、accept 等待接收客户端的连接
 			sockaddr_in clientAddr = {};
 			int nAddrLen = sizeof(sockaddr_in);
 			SOCKET _cSock = INVALID_SOCKET;
@@ -213,15 +213,15 @@ int main()
 
 				g_clients.push_back(_cSock);	//新的套接字直接加入到动态数组中
 				printf("新的客户端加入：Socket = %d\t IP = %s \n", _cSock, inet_ntoa(clientAddr.sin_addr));
-			}					
+			}
 		}
 
-		for (size_t n =0; n < fdRead.fd_count; n++)
+		for (size_t n = 0; n < fdRead.fd_count; n++)
 		{
 			int result = processor(fdRead.fd_array[n]);		//处理接受到消息的套接字的信息
 			if (-1 == result)	//说明有程序退出了  我们就应该找到这个 然后移除它 
 			{
-				auto iter = find(g_clients.begin(),g_clients.end(),fdRead.fd_array[n]);
+				auto iter = find(g_clients.begin(), g_clients.end(), fdRead.fd_array[n]);
 				if (iter != g_clients.end())
 				{
 					g_clients.erase(iter);
