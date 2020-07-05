@@ -99,7 +99,7 @@ int processor(SOCKET _cSock)            //专门处理接受到的消息
 	DataHeader* header = (DataHeader*)szRecv;
 	if (len <= 0)
 	{
-		printf("客户端已经退出，任务结束\n");
+		printf("客户端 %d 已经退出，任务结束\n",_cSock);
 		return -1;
 	}
 	switch (header->cmd)
@@ -253,7 +253,7 @@ int main()
 				int result = processor(g_clients[n]);           //处理接受到消息的套接字的信息
 				if (-1 == result)       //说明有程序退出了  我们就应该找到这个 然后移除它
 				{
-					auto iter = g_clients.begin();
+					auto iter = g_clients.begin()+n;
 					if (iter != g_clients.end())
 					{
 						g_clients.erase(iter);
