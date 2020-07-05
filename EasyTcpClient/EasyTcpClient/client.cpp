@@ -1,23 +1,24 @@
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-
 #ifdef _WIN32
-#include <WinSock2.h>
-#include <windows.h>
+	#define WIN32_LEAN_AND_MEAN
+	#define _WINSOCK_DEPRECATED_NO_WARNINGS
+	
+	#include <WinSock2.h>
+	#include <windows.h>
+	#pragma comment(lib,"ws2_32.lib")	//解决库调用  我们用通用的方法 已经在属性中添加了
 #else
-#include <unistd.h>             //unix的标准库
-#include <arpa/inet.h>
-#include <string.h>
+	#include <unistd.h>             //unix的标准库
+	#include <arpa/inet.h>
+	#include <string.h>
 
-#define SOCKET int
-#define INVALID_SOCKET (SOCKET)(~0)
-#define SOCKET_ERROR (-1)
+	//解决宏定义 
+	#define SOCKET int
+	#define INVALID_SOCKET (SOCKET)(~0)
+	#define SOCKET_ERROR (-1)
 #endif
 
 #include <stdio.h>
 #include <thread>
 
-//#pragma comment(lib,"ws2_32.lib");    //解决库调用  我们用通用的方法 已经在属性中添加了
 enum CMD        //枚举登录和登出
 {
 	CMD_LOGIN,
@@ -183,7 +184,7 @@ int main()
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);
 #ifdef _WIN32
-	_sin.sin_addr.S_un.S_addr = inet_addr("192.168.1.188");
+	_sin.sin_addr.S_un.S_addr = inet_addr("192.168.1.188");	//127.0.0.1
 #else
 	_sin.sin_addr.s_addr = inet_addr("192.168.1.188");
 #endif

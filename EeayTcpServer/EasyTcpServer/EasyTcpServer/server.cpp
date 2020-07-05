@@ -1,13 +1,26 @@
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #include <WinSock2.h>
 #include <windows.h>
+#pragma comment(lib,"ws2_32.lib")       //解决库调用  我们用通用的方法 已经在属性中添加了
+#else
+#include <unistd.h>             //unix的标准库
+#include <arpa/inet.h>
+#include <string.h>
+
+#define SOCKET int
+#define INVALID_SOCKET (SOCKET)(~0)
+#define SOCKET_ERROR (-1)
+#endif
+
 #include "stdio.h"
 #include <vector>
 
-//#pragma comment(lib,"ws2_32.lib");	//解决库调用  我们用通用的方法 已经在属性中添加了
 
-enum CMD	//枚举登录和登出
+
+enum CMD        //枚举登录和登出
 {
 	CMD_LOGIN,
 	CMD_LOGIN_RESULT,
@@ -17,13 +30,13 @@ enum CMD	//枚举登录和登出
 	CMD_ERROR
 };
 
-struct DataHeader	//定义数据包头
+struct DataHeader       //定义数据包头
 {
 	short dataLength;
 	short cmd;
 };
 
-struct Login : public DataHeader		//定义一个结构体封装数据
+struct Login : public DataHeader                //定义一个结构体封装数据
 {
 	Login()
 	{
@@ -34,7 +47,7 @@ struct Login : public DataHeader		//定义一个结构体封装数据
 	char passWord[32];
 };
 
-struct LoginResult : public DataHeader	//返回登录的结果
+struct LoginResult : public DataHeader  //返回登录的结果
 {
 	LoginResult()
 	{
@@ -45,7 +58,7 @@ struct LoginResult : public DataHeader	//返回登录的结果
 	int result;
 };
 
-struct Logout : public DataHeader		//返回谁要退出
+struct Logout : public DataHeader               //返回谁要退出
 {
 	Logout()
 	{
@@ -54,7 +67,7 @@ struct Logout : public DataHeader		//返回谁要退出
 	}
 	char username[32];
 };
-struct LogoutResult : public DataHeader		//返回登出的结果
+struct LogoutResult : public DataHeader         //返回登出的结果
 {
 	LogoutResult()
 	{
@@ -64,7 +77,7 @@ struct LogoutResult : public DataHeader		//返回登出的结果
 	}
 	int result;
 };
-struct NewUserJoin : public DataHeader		//新用户加入
+struct NewUserJoin : public DataHeader          //新用户加入
 {
 	NewUserJoin()
 	{
@@ -75,14 +88,14 @@ struct NewUserJoin : public DataHeader		//新用户加入
 	int scok;
 };
 
-std::vector<SOCKET> g_clients;	//存放所有的socket
+std::vector<SOCKET> g_clients;  //存放所有的socket
 
-int processor(SOCKET _cSock)		//专门处理接受到的消息
+int processor(SOCKET _cSock)            //专门处理接受到的消息
 {
 
 	//缓冲区
 	char szRecv[4096] = {};
-	int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+	int len = (int)recv(_cSock, szRecv, sizeof(DataHeader), 0);
 	DataHeader* header = (DataHeader*)szRecv;
 	if (len <= 0)
 	{
@@ -124,10 +137,12 @@ int processor(SOCKET _cSock)		//专门处理接受到的消息
 }
 int main()
 {
+#ifdef _WIN32
 	//启动window socket 环境
 	WORD ver = MAKEWORD(2, 2);
 	WSADATA dat;
 	WSAStartup(ver, &dat);
+#endif
 
 	//用Socket API 建立简易TCP客户端
 
@@ -138,7 +153,13 @@ int main()
 	sockaddr_in _sin = {};
 	_sin.sin_family = AF_INET;
 	_sin.sin_port = htons(4567);
-	_sin.sin_addr.S_un.S_addr = INADDR_ANY;	//或者 inet_addr("127.0.0.1")
+#ifdef _WIN32
+	_sin.sin_addr.S_un.S_addr = INADDR_ANY; //或者 inet_addr("127.0.0.1")
+#else
+	_sin.sin_addr.s_addr = INADDR_ANY;      //或者 inet_addr("127.0.0.1")
+#endif // _WIN32
+
+
 	if (SOCKET_ERROR == bind(_sock, (sockaddr*)&_sin, sizeof(_sin)))
 	{
 		printf("错误，绑定端口失败...\n");
@@ -173,30 +194,39 @@ int main()
 		FD_SET(_sock, &fdRead);
 		FD_SET(_sock, &fdWrite);
 		FD_SET(_sock, &fdExp);
-
+		SOCKET maxSock = _sock;
 		for (int n = (int)g_clients.size() - 1; n >= 0; n--)
 		{
 			FD_SET(g_clients[n], &fdRead);
+			if (maxSock < g_clients[n])
+			{
+				maxSock = g_clients[n];
+			}
 		}
 
-		//nfds是一个整数值，是指fd_set集合中所有描述符（socket）的范围，而不是数量，即是所有文件描述符最大值+1，再window中，该值可以写0
-		timeval t = { 1,0 };	//定时
-		int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExp, &t);
+		//nfds是一个整数值，是指fd_set集合中所有描述符（socket）的范围，而不是数量，
+		//即是所有文件描述符最大值+1，再window中，该值可以写0   注意  是最大值加一！！！
+		timeval t = { 1,0 };    //定时
+		int ret = select(maxSock + 1, &fdRead, &fdWrite, &fdExp, &t);
 		if (ret < 0)
 		{
 			printf("select 任务结束\n");
 			break;
 		}
-		if (FD_ISSET(_sock, &fdRead))	//FD_ISSET:判断一个文件描述符是否在一个集合中，返回值:在1,不在0
+		if (FD_ISSET(_sock, &fdRead))   //FD_ISSET:判断一个文件描述符是否在一个集合中，返回值:在1,不在0
 		{
-			FD_CLR(_sock, &fdRead);	//FD_CLR:将一个文件描述符从集合中移除
+			FD_CLR(_sock, &fdRead); //FD_CLR:将一个文件描述符从集合中移除
 
 									//4、accept 等待接收客户端的连接
 			sockaddr_in clientAddr = {};
 			int nAddrLen = sizeof(sockaddr_in);
 			SOCKET _cSock = INVALID_SOCKET;
-
+#ifdef _WIN32
 			_cSock = accept(_sock, (sockaddr*)&clientAddr, &nAddrLen);
+#else
+			_cSock = accept(_sock, (sockaddr*)&clientAddr, (socklen_t *)&nAddrLen);
+#endif // _WIN32
+
 			if (INVALID_SOCKET == _cSock)
 			{
 				printf("错误，接收到无效客户端...\n");
@@ -211,33 +241,44 @@ int main()
 					send(g_clients[n], (const char*)&userjoin, sizeof(NewUserJoin), 0);
 				}
 
-				g_clients.push_back(_cSock);	//新的套接字直接加入到动态数组中
+				g_clients.push_back(_cSock);    //新的套接字直接加入到动态数组中
 				printf("新的客户端加入：Socket = %d\t IP = %s \n", _cSock, inet_ntoa(clientAddr.sin_addr));
 			}
 		}
 
-		for (size_t n = 0; n < fdRead.fd_count; n++)
+		for (int n = (int)g_clients.size() - 1; n >= 0; n--)
 		{
-			int result = processor(fdRead.fd_array[n]);		//处理接受到消息的套接字的信息
-			if (-1 == result)	//说明有程序退出了  我们就应该找到这个 然后移除它 
+			if (FD_ISSET(g_clients[n], &fdRead))
 			{
-				auto iter = find(g_clients.begin(), g_clients.end(), fdRead.fd_array[n]);
-				if (iter != g_clients.end())
+				int result = processor(g_clients[n]);           //处理接受到消息的套接字的信息
+				if (-1 == result)       //说明有程序退出了  我们就应该找到这个 然后移除它
 				{
-					g_clients.erase(iter);
+					auto iter = g_clients.begin();
+					if (iter != g_clients.end())
+					{
+						g_clients.erase(iter);
+					}
 				}
 			}
 		}
 		//printf("空闲时间处理其他业务\n");
 	}
-	for (int n = (int)g_clients.size() - 1; n >= 0; n--)	//如果程序正常退出，该for语句是不会得到执行的
+	for (int n = (int)g_clients.size() - 1; n >= 0; n--)    //如果程序正常退出，该for语句是不会得到执行的
 	{
-		closesocket(g_clients[n]);	//关闭
+#ifdef _WIN32
+		closesocket(g_clients[n]);      //关闭
+#else
+		close(g_clients[n]);
+#endif
 	}
 
 	//6、关闭套接字
-	closesocket(_sock);
+#ifdef _WIN32
 	WSACleanup();
+	closesocket(_sock);
+#else
+	close(_sock);
+#endif
 	printf("已退出\n");
 	getchar();
 	return 0;
