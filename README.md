@@ -8,3 +8,10 @@
 
 
 注意在配置中 链接器->输入 添加依赖项  ws2_32.lib
+
+在linux下编译文件：
+g++ client.cpp -std+=c++11 pthread -o client
+
+-std+=c++11   是因为使用了vectoer 模板
+
+pthread     是因为使用了线程
