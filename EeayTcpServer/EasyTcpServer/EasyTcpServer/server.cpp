@@ -77,7 +77,7 @@ struct NewUserJoin : public DataHeader		//新用户加入
 
 std::vector<SOCKET> g_clients;	//存放所有的socket
 
-int processor(SOCKET _cSock)
+int processor(SOCKET _cSock)		//专门处理接受到的消息
 {
 
 	//缓冲区
@@ -94,7 +94,7 @@ int processor(SOCKET _cSock)
 		
 		case CMD_LOGIN:
 		{
-			//注意 这里为什么要加 sizeof(DataHeader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
+			//注意 这里为什么要加 sizeof(DataHe ader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
 			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 			Login *login = (Login*)szRecv;
 			printf("收到客户端 %d 的命令：CMD_LOGIN, 数据长度%d ,userName = %s Password = %s\n",_cSock, login->dataLength, login->userName, login->passWord);
@@ -161,6 +161,7 @@ int main()
 
 	while (true)
 	{
+		//伯克利套接字 BSD socket
 		fd_set fdRead;
 		fd_set fdWrite;
 		fd_set fdExp;
@@ -203,22 +204,21 @@ int main()
 			else
 			{
 				printf("监听端口成功 \n");
-			}		
-			//新的客户端还没有加入到vector之后，就先群发给所有其他成员
-			for (int n = (int)g_clients.size() - 1; n >= 0; n--)
-			{
-				NewUserJoin userjoin;
-				send(g_clients[n],(const char*)&userjoin,sizeof(NewUserJoin),0);
-			}
+				//新的客户端还没有加入到vector之后，就先群发给所有其他成员
+				for (int n = (int)g_clients.size() - 1; n >= 0; n--)
+				{
+					NewUserJoin userjoin;
+					send(g_clients[n], (const char*)&userjoin, sizeof(NewUserJoin), 0);
+				}
 
-			g_clients.push_back(_cSock);	//新的套接字直接加入到动态数组中
-			printf("新的客户端加入：Socket = %d\t IP = %s \n", _cSock,inet_ntoa(clientAddr.sin_addr));
-			
+				g_clients.push_back(_cSock);	//新的套接字直接加入到动态数组中
+				printf("新的客户端加入：Socket = %d\t IP = %s \n", _cSock, inet_ntoa(clientAddr.sin_addr));
+			}					
 		}
 
 		for (size_t n =0; n < fdRead.fd_count; n++)
 		{
-			int result = processor(fdRead.fd_array[n]);
+			int result = processor(fdRead.fd_array[n]);		//处理接受到消息的套接字的信息
 			if (-1 == result)	//说明有程序退出了  我们就应该找到这个 然后移除它 
 			{
 				auto iter = find(g_clients.begin(),g_clients.end(),fdRead.fd_array[n]);
@@ -228,19 +228,15 @@ int main()
 				}
 			}
 		}
-		printf("空闲时间处理其他业务\n");
+		//printf("空闲时间处理其他业务\n");
 	}
-	for (int n = (int)g_clients.size() - 1; n >= 0; n--)
+	for (int n = (int)g_clients.size() - 1; n >= 0; n--)	//如果程序正常退出，该for语句是不会得到执行的
 	{
 		closesocket(g_clients[n]);	//关闭
 	}
 
 	//6、关闭套接字
 	closesocket(_sock);
-
-	//用Socket API 建立简易TCP客户端
-	//1、建立一个socket
-	//2、bind 绑定用于接收客户端里连接的网络端口
 	WSACleanup();
 	printf("已退出\n");
 	getchar();

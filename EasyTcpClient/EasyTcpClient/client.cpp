@@ -2,8 +2,8 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <WinSock2.h>
 #include <windows.h>
-#include "stdio.h"
-
+#include <stdio.h>
+#include <thread>
 
 //#pragma comment(lib,"ws2_32.lib");	//解决库调用  我们用通用的方法 已经在属性中添加了
 enum CMD	//枚举登录和登出
@@ -74,7 +74,7 @@ struct NewUserJoin : public DataHeader		//新用户加入
 	int scok;
 };
 
-int processor(SOCKET _cSock)
+int processor(SOCKET _cSock)	//专门处理接受到的消息
 {
 
 	//缓冲区
@@ -93,7 +93,7 @@ int processor(SOCKET _cSock)
 		{
 			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 			LoginResult *login = (LoginResult*)szRecv;
-			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", _cSock, header->dataLength);
+			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", header->dataLength);
 			
 			break;
 		}
@@ -101,18 +101,50 @@ int processor(SOCKET _cSock)
 		{
 			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 			LogoutResult *logout = (LogoutResult*)szRecv;
-			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", _cSock, header->dataLength);
+			printf("收到服务器的消息：CMD_LOGIN_RESULT, 数据长度%d \n", header->dataLength);
 			break;
 		}
 		case CMD_NEW_USER_JOIN:
 		{
 			recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
 			NewUserJoin *userjoin = (NewUserJoin*)szRecv;
-			printf("收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度%d \n", _cSock, header->dataLength);
+			printf("收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度%d \n", header->dataLength);
 			break;
 		}
 	}
 	return 0;
+}
+
+bool g_bRun = true;
+void cmdThread(SOCKET _sock)
+{
+	while (true)
+	{
+		char cmdBuf[256] = {};
+		scanf("%s", cmdBuf);
+		if (0 == strcmp(cmdBuf, "exit"))
+		{
+			g_bRun = false;
+			printf("退出线程\n");
+			break;
+		}
+		else if (0 == strcmp(cmdBuf, "Login"))
+		{
+			Login login;
+			strcpy(login.userName, "majun");
+			strcpy(login.passWord, "518811");
+			send(_sock, (const char*)&login, sizeof(Login), 0);
+		}
+		else if (0 == strcmp(cmdBuf, "Logout"))
+		{
+			Logout logout;
+			strcpy(logout.username, "majun");
+			send(_sock, (const char*)&logout, sizeof(Logout), 0);
+		}
+		else {
+			printf("不支持的命令\n");
+		}
+	}
 }
 
 int main()
@@ -141,20 +173,25 @@ int main()
 	int ret = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 	if (SOCKET_ERROR == ret)
 	{
-		printf("错误，连接Socket失败...\n");
+		printf("错误，连接服务器失败...\n");
 	}
 	else
 	{
-		printf("连接Socket成功...\n");
+		printf("连接服务器成功...\n");
 	}
-	char cmdBuf[128] = {};
-	while (true)
+
+	//启动线程
+	std::thread t1(cmdThread,_sock);	//第一个是函数名 第二个就是要传入的参数
+	t1.detach();		//和主线程进行分离  一定要进行分离，不然子线程的退出会直接导致主线程也退出，但是，主线程没有正常结束程序，就会产生问题
+	while (g_bRun)
 	{
-		fd_set fdRead;
+	    fd_set fdRead;
 		FD_ZERO(&fdRead);
 		FD_SET(_sock,&fdRead);
-		timeval t = { 1,0 };//前面是秒 后面是毫秒
+		
+		timeval t = { 1,0 };//前面是秒 后面是毫秒	让select每隔1秒去扫描一下
 		int ret = select(_sock,&fdRead,0,0,&t);
+		
 		if (ret < 0)
 		{
 			printf("select 任务结束1");
@@ -168,54 +205,6 @@ int main()
 				break;
 			}
 		}
-
-		//printf("空闲时间 做其他业务\n");
-		Login login;
-		strcpy(login.userName,"majun");
-		strcpy(login.passWord,"518811");
-		send(_sock,(const char*)&login,sizeof(Login),0);
-		Sleep(2000);
-		
-		/*
-		//3、输入请求命令
-		scanf("%s",cmdBuf);
-
-		//4、处理请求命令
-		if (0 == strcmp(cmdBuf,"exit"))
-		{
-			break;
-		}
-		else if (0 == strcmp(cmdBuf, "Login"))
-		{
-			Login login;
-			strcpy(login.userName,"majun");
-			strcpy(login.passWord,"5188119");
-
-			//5、向服务器发送请求
-			send(_sock, (const char *)&login, sizeof(login), 0);	//再发包体
-
-			//再进行接受
-			LoginResult loginret = {};
-			recv(_sock, (char*)&loginret, sizeof(loginret), 0);
-			printf("LoginResult = %d\n ",loginret.result);
-		}
-		else if (0 == strcmp(cmdBuf, "Logout"))
-		{
-			Logout logout;
-			strcpy(logout.username,"majun");
-			//5、向服务器发送请求
-			send(_sock, (const char *)&logout, sizeof(logout), 0);	//再发包体
-
-			//再进行接受	
-			LogoutResult logoutret = {};			
-			recv(_sock, (char*)&logoutret, sizeof(logoutret), 0);
-			printf("LoginResult = %d\n ", logoutret.result);
-		}
-		else
-		{
-			printf("不支持的命令，请重重新输入\n");
-		}
-		*/
 	}
 	
 	WSACleanup();
