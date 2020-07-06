@@ -64,10 +64,10 @@ public:
 	int Connect(const char* ip,unsigned short port)
 	{
 		//2、连接服务器 connect
-		if (_sock == INVALID_SOCKET)
-		{
-			InitSoket();
-		}
+		//if (_sock == INVALID_SOCKET)
+		//{
+		//	InitSoket();
+		//}
 		sockaddr_in _sin = {};
 		_sin.sin_family = AF_INET;
 		_sin.sin_port = htons(port);
@@ -171,7 +171,7 @@ public:
 			case CMD_LOGOUT_RESULT:
 			{
 				LogoutResult *logout = (LogoutResult*)header;
-				cout << "收到服务器的消息：CMD_LOGIN_RESULT, 数据长度:" << logout->dataLength << endl;
+				cout << "收到服务器的消息：CMD_LOGOUT_RESULT, 数据长度:" << logout->dataLength << endl;
 				break;
 			}
 			case CMD_NEW_USER_JOIN:
@@ -199,9 +199,39 @@ public:
 		}
 
 	}
-
-
 };
+
+void cmdThread(EasyTcpClient* client)
+{
+	while (true)
+	{
+		char cmdBuf[256] = {};
+		/*scanf("%s", cmdBuf);*/
+		cin >> cmdBuf;
+		if (0 == strcmp(cmdBuf, "exit"))
+		{
+			client->Close();
+			cout << "退出线程" << endl;
+			break;
+		}
+		else if (0 == strcmp(cmdBuf, "Login"))
+		{
+			Login login;
+			strcpy(login.userName, "majun");
+			strcpy(login.passWord, "518811");
+			client->SendData(&login);
+		}
+		else if (0 == strcmp(cmdBuf, "Logout"))
+		{
+			Logout logout;
+			strcpy(logout.username, "majun");
+			client->SendData(&logout);
+		}
+		else {
+			cout << "不支持的命令" << endl;
+		}
+	}
+}
 
 
 #endif // !_EasyTcpClient_hpp_
