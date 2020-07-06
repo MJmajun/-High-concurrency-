@@ -20,11 +20,13 @@
 #include <iostream>
 using namespace std;
 #include "MessageHeader.hpp"
+#define RECV_BUFF_SIZE 10240
 
 class EasyTcpClient
 {
 private:
 	SOCKET _sock;
+	int _count=0;
 public:
 	EasyTcpClient()
 	{
@@ -110,8 +112,9 @@ public:
 			FD_ZERO(&fdRead);
 			FD_SET(_sock, &fdRead);
 
-			timeval t = { 1,0 };//前面是秒 后面是毫秒       让select每隔1秒去扫描一下
+			timeval t = { 0,0 };//前面是秒 后面是毫秒       让select每隔1秒去扫描一下
 			int ret = select(_sock + 1, &fdRead, 0, 0, &t);
+			//cout <<"ret = "<< ret <<"select_count =" <<_count++ << endl;
 
 			if (ret < 0)
 			{
@@ -140,19 +143,51 @@ public:
 	}
 
 	//收数据据   处理粘包和拆包
+	int _lastPos = 0;
 	int RecvData(SOCKET _cSock)
 	{
 		//缓冲区
-		char szRecv[4096] = {};
-		int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
-		DataHeader* header = (DataHeader*)szRecv;
+		char _szRecv[RECV_BUFF_SIZE] = {};
+		//第二级缓冲区
+		char _szMsgBuf[RECV_BUFF_SIZE * 10] = {};
+		//int len = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+		int len = recv(_cSock, _szRecv, RECV_BUFF_SIZE, 0);
+		//cout << "len = " << len << endl;
+
+		DataHeader* header = (DataHeader*)_szRecv;
 		if (len <= 0)
 		{
 			cout<< "Socket = " <<_cSock<<" 与服务器断开连接，任务结束"<<endl;
 			return -1;
 		}
-		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
-		OnNetMsg(header);
+		//将收取到的数据拷贝到消息缓冲区
+		::memcpy(_szMsgBuf + _lastPos,_szRecv,len);
+		//将消息缓冲区的数据尾部位置后移
+		_lastPos += len;
+		//循环判断消息缓冲区的长度是否大于消息长度
+		while(_lastPos >= sizeof(DataHeader))	//解决粘包
+		{
+			//这时候就可以知道当前消息的长度
+			DataHeader* header = (DataHeader*)_szMsgBuf;
+			//判断消息缓冲区的长度大于消息长度
+			if (_lastPos >= header->dataLength)		//解决少包
+			{
+				//消息缓冲区剩余未处理的数据的长度
+				int nSize = _lastPos - header->dataLength;
+
+				//处理网络消息
+				OnNetMsg(header);
+				//将消息缓冲区剩余的数据前移
+				::memcpy(_szMsgBuf,_szMsgBuf+header->dataLength,nSize);
+				//消息缓冲区的数据尾部向前移动
+				_lastPos = nSize;
+			}
+			else 
+			{
+				//剩余消息不足一完整消息
+				break;
+			}
+		}
 		return 0;
 	}
 
@@ -164,21 +199,30 @@ public:
 			case CMD_LOGIN_RESULT:
 			{
 				LoginResult *login = (LoginResult*)header;
-				cout<<"收到服务器的消息：CMD_LOGIN_RESULT, 数据长度:"<< login->dataLength<<endl;
+				//cout<<"收到服务器的消息：CMD_LOGIN_RESULT, 数据长度:"<< login->dataLength<<endl;
 
 				break;
 			}
 			case CMD_LOGOUT_RESULT:
 			{
 				LogoutResult *logout = (LogoutResult*)header;
-				cout << "收到服务器的消息：CMD_LOGOUT_RESULT, 数据长度:" << logout->dataLength << endl;
+				//cout << "收到服务器的消息：CMD_LOGOUT_RESULT, 数据长度:" << logout->dataLength << endl;
 				break;
 			}
 			case CMD_NEW_USER_JOIN:
 			{
 				NewUserJoin *userjoin = (NewUserJoin*)header;
-				cout << "收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度:"<< userjoin->dataLength<<endl;
+				//cout << "收到服务器的消息：CMD_NEW_USER_JOIN, 数据长度:"<< userjoin->dataLength<<endl;
 				break;
+			}
+			case CMD_ERROR:
+			{
+				cout << "收到服务器的消息：CMD_ERROR,数据长度：" << header->dataLength << endl;
+				break;
+			}
+			default:
+			{
+				cout << "收到服务器未定义的消息 数据长度: " << header->dataLength << endl;
 			}
 		}
 	}

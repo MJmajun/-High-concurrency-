@@ -27,7 +27,7 @@ class EasyTcpServer
 {
 private:
 	SOCKET _sock;
-	vector<SOCKET> g_clients;  //存放所有的socket
+	vector<SOCKET> _clients;  //存放所有的socket
 public:
 	EasyTcpServer() 
 	{
@@ -134,7 +134,7 @@ public:
 		{
 			NewUserJoin userjoin;
 			SendDataToAll(&userjoin);
-			g_clients.push_back(_cSock);    //新的套接字直接加入到动态数组中
+			_clients.push_back(_cSock);    //新的套接字直接加入到动态数组中
 			cout<< "新的客户端加入 Socket = " << _cSock <<endl;
 		}
 		return _cSock;
@@ -158,12 +158,12 @@ public:
 			FD_SET(_sock, &fdWrite);
 			FD_SET(_sock, &fdExp);
 			SOCKET maxSock = _sock;
-			for (int n = (int)g_clients.size() - 1; n >= 0; n--)
+			for (int n = (int)_clients.size() - 1; n >= 0; n--)
 			{
-				FD_SET(g_clients[n], &fdRead);
-				if (maxSock < g_clients[n])
+				FD_SET(_clients[n], &fdRead);
+				if (maxSock < _clients[n])
 				{
-					maxSock = g_clients[n];
+					maxSock = _clients[n];
 				}
 			}
 
@@ -183,17 +183,17 @@ public:
 				Accept();
 			}
 
-			for (int n = (int)g_clients.size() - 1; n >= 0; n--)
+			for (int n = (int)_clients.size() - 1; n >= 0; n--)
 			{
-				if (FD_ISSET(g_clients[n], &fdRead))
+				if (FD_ISSET(_clients[n], &fdRead))
 				{
-					int result = RecvData(g_clients[n]);           //处理接受到消息的套接字的信息
+					int result = RecvData(_clients[n]);           //处理接受到消息的套接字的信息
 					if (-1 == result)       //说明有程序退出了  我们就应该找到这个 然后移除它
 					{
-						auto iter = g_clients.begin() + n;
-						if (iter != g_clients.end())
+						auto iter = _clients.begin() + n;
+						if (iter != _clients.end())
 						{
-							g_clients.erase(iter);
+							_clients.erase(iter);
 						}
 					}
 				}
@@ -235,7 +235,7 @@ public:
 				//注意 这里为什么要加 sizeof(DataHe ader)和减去sizeof(DataHeader)  是因为 前面 我们已经接受了一次头  所以 这里要做地址偏移
 				
 				Login *login = (Login*)header;
-				cout<<"收到客户端 "<<_cSock<<" 的命令：CMD_LOGIN, 数据长度= "<< login->dataLength <<" ,userName = "<< login->userName <<" Password = "<< login->passWord<<endl;
+				//cout<<"收到客户端 "<<_cSock<<" 的命令：CMD_LOGIN, 数据长度= "<< login->dataLength <<" ,userName = "<< login->userName <<" Password = "<< login->passWord<<endl;
 				//忽略用户密码是否正确的过程
 				LoginResult ret;
 				send(_cSock, (char*)&ret, sizeof(LoginResult), 0);
@@ -244,7 +244,7 @@ public:
 			case CMD_LOGOUT:
 			{
 				Logout *logout = (Logout*)header;
-				cout << "收到客户端 " << _cSock << " 的命令：CMD_LOGOUT, 数据长度= " << logout->dataLength << " ,userName = " << logout->username << endl;
+				//cout << "收到客户端 " << _cSock << " 的命令：CMD_LOGOUT, 数据长度= " << logout->dataLength << " ,userName = " << logout->username << endl;
 				//忽略用户密码是否正确的过程
 				LogoutResult ret;
 				send(_cSock, (char*)&ret, sizeof(LogoutResult), 0);
@@ -273,9 +273,9 @@ public:
 	void SendDataToAll( DataHeader* header)
 	{
 		//新的客户端还没有加入到vector之后，就先群发给所有其他成员
-		for (int n = (int)g_clients.size() - 1; n >= 0; n--)
+		for (int n = (int)_clients.size() - 1; n >= 0; n--)
 		{
-			SendData(g_clients[n], header);
+			SendData(_clients[n], header);
 		}
 	}
 	//关闭socket
@@ -283,12 +283,12 @@ public:
 	{
 		if (_sock != INVALID_SOCKET)
 		{
-			for (int n = (int)g_clients.size() - 1; n >= 0; n--)    //如果程序正常退出，该for语句是不会得到执行的
+			for (int n = (int)_clients.size() - 1; n >= 0; n--)    //如果程序正常退出，该for语句是不会得到执行的
 			{
 #ifdef _WIN32
-				closesocket(g_clients[n]);      //关闭
+				closesocket(_clients[n]);      //关闭
 #else
-				close(g_clients[n]);
+				close(_clients[n]);
 #endif
 			}
 
