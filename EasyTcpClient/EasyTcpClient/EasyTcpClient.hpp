@@ -52,16 +52,16 @@ public:
 		_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (INVALID_SOCKET == _sock)
 		{
-			cout<<"错误，建立Socket失败..."<<endl;
+			cout<<"错误，建立Socket = "<<_sock<<" 失败..."<<endl;
 		}
 		else
 		{
-			cout<< "建立Socket成功..." << endl;
+			cout<< "建立Socket = " << _sock << "成功..." << endl;
 		}
 	}
 
 	//连接服务器
-	int Connect(char* ip,unsigned short port)
+	int Connect(const char* ip,unsigned short port)
 	{
 		//2、连接服务器 connect
 		if (_sock == INVALID_SOCKET)
@@ -79,11 +79,11 @@ public:
 		int ret = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
 		if (SOCKET_ERROR == ret)
 		{
-			cout << "错误，连接服务器失败..." << endl;
+			cout << "Socket = "<<_sock<<" 连接服务器<"<< ip <<" : "<<port<<" > 失败..." << endl;
 		}
 		else
 		{
-			cout << "连接服务器成功..." << endl;
+			cout <<"Socket = "<<_sock<<" 连接服务器<" << ip << " : " << port << " >成功..." << endl;
 		}
 		return ret;
 	}
@@ -115,19 +115,22 @@ public:
 
 			if (ret < 0)
 			{
-				cout << "select 任务结束2"<<endl;
+				Close();
+				cout << "Socket = " << _sock<< " select 任务结束2"<<endl;
+				return false;
 			}
 			if (FD_ISSET(_sock, &fdRead))
 			{
 				FD_CLR(_sock, &fdRead);
 				if (-1 == RecvData(_sock))
 				{
-					cout << "select 任务结束2"<<endl;
+					cout << "Socket = " << _sock<< " select 任务结束2"<<endl;
+					Close();
+					return false;
 				}
-			}
-			return true;
+			}		
 		}
-		return false;
+		return true;	
 	}
 
 	//判断是否有连接
@@ -145,7 +148,7 @@ public:
 		DataHeader* header = (DataHeader*)szRecv;
 		if (len <= 0)
 		{
-			cout<<"与服务器断开连接，任务结束"<<endl;
+			cout<< "Socket = " <<_cSock<<" 与服务器断开连接，任务结束"<<endl;
 			return -1;
 		}
 		recv(_cSock, szRecv + sizeof(DataHeader), header->dataLength - sizeof(DataHeader), 0);
