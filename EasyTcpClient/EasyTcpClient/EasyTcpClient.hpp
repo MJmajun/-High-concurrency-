@@ -20,7 +20,11 @@
 #include <iostream>
 using namespace std;
 #include "MessageHeader.hpp"
-#define RECV_BUFF_SIZE 10240
+#ifndef RECV_BUFF_SIZE
+	#define RECV_BUFF_SIZE 10240
+#endif // !RECV_BUFF_SIZE
+
+
 
 class EasyTcpClient
 {
@@ -66,10 +70,10 @@ public:
 	int Connect(const char* ip,unsigned short port)
 	{
 		//2、连接服务器 connect
-		//if (_sock == INVALID_SOCKET)
-		//{
-		//	InitSoket();
-		//}
+		if (_sock == INVALID_SOCKET)
+		{
+			InitSoket();
+		}
 		sockaddr_in _sin = {};
 		_sin.sin_family = AF_INET;
 		_sin.sin_port = htons(port);
@@ -244,13 +248,12 @@ public:
 
 	}
 };
-
+/*
 void cmdThread(EasyTcpClient* client)
 {
 	while (true)
 	{
 		char cmdBuf[256] = {};
-		/*scanf("%s", cmdBuf);*/
 		cin >> cmdBuf;
 		if (0 == strcmp(cmdBuf, "exit"))
 		{
@@ -276,6 +279,7 @@ void cmdThread(EasyTcpClient* client)
 		}
 	}
 }
+*/
 
 
 #endif // !_EasyTcpClient_hpp_

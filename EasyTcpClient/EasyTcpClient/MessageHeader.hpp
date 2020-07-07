@@ -32,6 +32,11 @@ enum CMD        //枚举登录和登出
 
 struct DataHeader       //定义数据包头
 {
+	DataHeader()
+	{
+		dataLength = sizeof(DataHeader);
+		cmd = CMD_ERROR;
+	}
 	short dataLength;
 	short cmd;
 };
@@ -45,6 +50,7 @@ struct Login : public DataHeader                //定义一个结构体封装数据
 	}
 	char userName[32];
 	char passWord[32];
+	char data[932];	//凑齐1k
 };
 
 struct LoginResult : public DataHeader  //返回登录的结果
@@ -53,9 +59,10 @@ struct LoginResult : public DataHeader  //返回登录的结果
 	{
 		dataLength = sizeof(LoginResult);
 		cmd = CMD_LOGIN_RESULT;
-		result = 1;
+		result = 0;
 	}
 	int result;
+	char data[992];	//凑齐1k
 };
 
 struct Logout : public DataHeader               //返回谁要退出
