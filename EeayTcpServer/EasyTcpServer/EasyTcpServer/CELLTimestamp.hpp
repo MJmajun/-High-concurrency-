@@ -12,13 +12,14 @@ public:
 	{
 		//QueryPerformanceFrequency(&_frequency);
 		//QueryPerformanceCounter(&_startCount);
+		updata();
 	}
 	~CELLTimestamp()
 	{
 
 	}
 
-	void  update()
+	void  updata()
 	{
 		/*QueryPerformanceCounter(&_startCount);*/
 		_begin = high_resolution_clock::now();	//更新当前时间
@@ -26,13 +27,13 @@ public:
 
 
 	/*获取秒*/
-	double getElapsedSecond()
+	float getElapsedSecond()
 	{
-		return this->getElapsedTimeInMicroSec() * 0.000001;
+		return getElapsedTimeInMicroSec() * 0.000001;
 	}
 
 	/*获取毫秒*/
-	double getElapsedTimeInMilliSec()
+	float getElapsedTimeInMilliSec()
 	{
 		return this->getElapsedTimeInMicroSec() * 0.001;
 	}

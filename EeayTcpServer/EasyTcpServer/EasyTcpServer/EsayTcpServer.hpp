@@ -7,6 +7,7 @@
 
 	#include <WinSock2.h>
 	#include <windows.h>
+	
 	#pragma comment(lib,"ws2_32.lib")       //解决库调用  我们用通用的方法 已经在属性中添加了
 #else
 	#include <unistd.h>             //unix的标准库
@@ -305,11 +306,12 @@ public:
 	virtual void OnNetMsg(SOCKET cSock,DataHeader* header)
 	{
 		_recvCount++;
-		auto t1 = _tTime.getElapsedSecond();
+		double t1 = _tTime.getElapsedSecond();
 		if (t1 >= 1.0)
 		{
-			cout << "t1 =  "<<t1<<" ,socket = "<<cSock <<" ,recvCount = "<<_recvCount<< endl;
-			_tTime.update();
+			printf("t1 = %f",t1);
+			cout<<" ,socket = "<<cSock <<" ,recvCount = "<<_recvCount<< endl;
+			_tTime.updata();
 			_recvCount = 0;
 		}
 		switch (header->cmd)
