@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <vector>
+#include "CELLTimestamp.hpp"
 #include "MessageHeader.hpp"
 using namespace std;
 #ifndef RECV_BUFF_SIZE
@@ -33,6 +34,7 @@ public:
 		_sockfd = sockfd;
 		_lastpos = 0;
 		memset(_szMsgBuf,0,sizeof(_szMsgBuf));
+		
 	}
 
 	SOCKET sockfd()
@@ -69,10 +71,13 @@ class EasyTcpServer
 private:
 	SOCKET _sock;
 	std::vector<ClientSocket*> _clients;  //存放所有的socket
+	CELLTimestamp _tTime;
+	int _recvCount;
 public:
 	EasyTcpServer() 
 	{
 		_sock = INVALID_SOCKET;
+		_recvCount = 0;
 	}
 	virtual ~EasyTcpServer()
 	{
@@ -223,6 +228,7 @@ public:
 			{
 				FD_CLR(_sock, &fdRead); //FD_CLR:将一个文件描述符从集合中移除
 				Accept();
+				return true;	//先连接完，然后再处理数据 ，， 这是为了测试
 			}
 
 			for (int n = (int)_clients.size() - 1; n >= 0; n--)
@@ -298,6 +304,14 @@ public:
 	//相应网络消息
 	virtual void OnNetMsg(SOCKET cSock,DataHeader* header)
 	{
+		_recvCount++;
+		auto t1 = _tTime.getElapsedSecond();
+		if (t1 >= 1.0)
+		{
+			cout << "t1 =  "<<t1<<" ,socket = "<<cSock <<" ,recvCount = "<<_recvCount<< endl;
+			_tTime.update();
+			_recvCount = 0;
+		}
 		switch (header->cmd)
 		{
 			case CMD_LOGIN:

@@ -20,13 +20,18 @@ void cmdThread()
 
 int main()
 {
-	const int count = 1;//FD_SETSIZE-1;
+	const int count = 500;//FD_SETSIZE-1;
 	EasyTcpClient* client[count];
 
 	for (int i = 0; i< count;i++)
 	{
-		client[i] = new EasyTcpClient();
-		client[i]->Connect("140.143.12.171", 4567);//140.143.12.171
+		client[i] = ::new EasyTcpClient();
+	}
+
+	for (int i = 0; i< count; i++)
+	{
+		client[i]->Connect("192.168.1.188", 4567);//140.143.12.171
+		cout <<"count= " <<i << endl;
 	}
 	
 

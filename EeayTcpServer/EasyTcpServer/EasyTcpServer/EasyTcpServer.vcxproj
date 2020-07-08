@@ -138,6 +138,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\EasyTcpClient\EasyTcpClient\MessageHeader.hpp" />
     <ClInclude Include="EsayTcpServer.hpp" />
+    <ClInclude Include="CELLTimestamp.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -26,5 +26,8 @@
     <ClInclude Include="..\..\..\EasyTcpClient\EasyTcpClient\MessageHeader.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CELLTimestamp.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
