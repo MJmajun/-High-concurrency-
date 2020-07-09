@@ -1,62 +1,84 @@
-#include <thread>
 #include "EasyTcpClient.hpp"
-
-
+#include <thread>
+#include "iostream"
+using namespace std;
 bool g_bRun = true;
-void cmdThread()
-{
+
+//客户端数量
+const int cCount = 200;
+//发送线程数量
+const int tCount = 4;
+//客户端数组
+EasyTcpClient* client[cCount];
+
+//将输入命令分离出来
+void cmdThread() {
 	while (true)
 	{
 		char cmdBuf[256] = {};
-		std::cin >> cmdBuf;
+		scanf("%s", cmdBuf);
 		if (0 == strcmp(cmdBuf, "exit"))
 		{
 			g_bRun = false;
-			cout << "退出线程" << endl;
+			printf("退出cmdThread线程\n");
 			break;
+		}
+		else
+		{
+			printf("不支持的命令\n");
 		}
 	}
 }
-
-int main()
+void sendThread(int id) //4个线程 1 - 4
 {
-	const int count = 100;//FD_SETSIZE-1;
-	EasyTcpClient* client[count];
-
-	for (int i = 0; i< count;i++)
+	//ID 1-4
+	int c = cCount / tCount;
+	int begin = (id - 1) * c;
+	int end = id * c;
+	for (int n = begin; n < end; n++)
 	{
-		client[i] = ::new EasyTcpClient();
+		client[n] = new EasyTcpClient();
 	}
-
-	for (int i = 0; i< count; i++)
+	for (int n = begin; n < end; n++)
 	{
-		client[i]->Connect("192.168.1.188", 4567);//140.143.12.171
-		cout <<"count= " <<i << endl;
+		client[n]->Connect("127.0.0.1", 4567);
+		printf("Connect = %d\n", n);
 	}
-	
-
-	std::thread t1(cmdThread);       //第一个是函数名 第二个就是要传入的参数
-	t1.detach();
-
-          //和主线程进行分离  一定要进行分离，不然子线程的退出会直接导致主线程也退出，但是，主线程没有正常结束程序，就会产生问题
 	Login login;
-	strcpy(login.userName,"majun majun majun");
-	strcpy(login.passWord,"0123456789");
+	strcpy(login.userName, "zjj");
+	strcpy(login.PassWord, "969513");
 	while (g_bRun)
 	{
-		for (int i = 0; i <count;i++)
+		for (int n = begin; n < end; n++)
 		{
-			client[i]->SendData(&login);
-			client[i]->OnRun();
+			client[n]->SendData(&login);
+			//client[n]->OnRun();
 		}
-
 	}
-	for (int i = 0; i <count; i++)
+
+	for (int n = begin; n < end; n++)
 	{
-		client[i]->Close();
+		client[n]->Close();
 	}
+}
 
-	cout << "已经退出" << endl;
-	getchar();
+//一个客户端同时链接多个服务器 以另外一种方式替换多线程方式
+//客户端自己向服务器发数据
+int main()
+{
+	thread t1(cmdThread);
+	t1.detach();
+
+	//启动发送线程
+	for (int n = 0; n < tCount; n++)
+	{
+		thread t1(sendThread, n + 1);
+		t1.detach();
+	}
+	while (g_bRun)
+	{
+		Sleep(100);
+	}
+	printf("已退出.\n");
 	return 0;
 }

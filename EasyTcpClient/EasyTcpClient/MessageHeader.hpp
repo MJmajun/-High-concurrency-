@@ -1,63 +1,39 @@
-#pragma once
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#ifndef FD_SETSIZE 
-#define FD_SETSIZE 1024
-#endif // !FD_SETSIZE 
-
-
-#include <WinSock2.h>
-#include <windows.h>
-#pragma comment(lib,"ws2_32.lib")	//解决库调用  我们用通用的方法 已经在属性中添加了
-#else
-#include <unistd.h>             //unix的标准库
-#include <arpa/inet.h>
-#include <string.h>
-
-//解决宏定义 
-#define SOCKET int
-#define INVALID_SOCKET (SOCKET)(~0)
-#define SOCKET_ERROR (-1)
-#endif
-
-#include <stdio.h>
-#include <thread>
-
-enum CMD        //枚举登录和登出
+#ifndef _MessageHeader_hpp_ 
+#define _MessageHeader_hpp_
+enum CMD
 {
 	CMD_LOGIN,
 	CMD_LOGIN_RESULT,
-	CMD_LOGOUT,
-	CMD_LOGOUT_RESULT,
+	CMD_LOGINOUT,
+	CMD_LOGINOUT_RESULT,
 	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
-
-struct DataHeader       //定义数据包头
+struct DataHeader
 {
 	DataHeader()
 	{
 		dataLength = sizeof(DataHeader);
 		cmd = CMD_ERROR;
 	}
-	short dataLength;
-	short cmd;
+	short dataLength;//数据长度 
+	short cmd;//命令
 };
-
-struct Login : public DataHeader                //定义一个结构体封装数据
+//DataPackage
+//包体
+struct Login : public DataHeader
 {
+	//DataHeader header;
 	Login()
 	{
 		dataLength = sizeof(Login);
 		cmd = CMD_LOGIN;
 	}
 	char userName[32];
-	char passWord[32];
-	char data[932];	//凑齐1k
+	char PassWord[32];
+	char data[932];
 };
-
-struct LoginResult : public DataHeader  //返回登录的结果
+struct LoginResult : public DataHeader
 {
 	LoginResult()
 	{
@@ -66,35 +42,37 @@ struct LoginResult : public DataHeader  //返回登录的结果
 		result = 0;
 	}
 	int result;
-	char data[992];	//凑齐1k
+	char data[992];
 };
-
-struct Logout : public DataHeader               //返回谁要退出
+struct LoginOut : public DataHeader
 {
-	Logout()
+	LoginOut()
 	{
-		dataLength = sizeof(Logout);
-		cmd = CMD_LOGOUT;
+		dataLength = sizeof(LoginOut);
+		cmd = CMD_LOGINOUT;
 	}
-	char username[32];
+	char userName[32];
 };
-struct LogoutResult : public DataHeader         //返回登出的结果
+struct LoginOutResult : public DataHeader
 {
-	LogoutResult()
+	LoginOutResult()
 	{
-		dataLength = sizeof(LogoutResult);
-		cmd = CMD_LOGOUT_RESULT;
+		dataLength = sizeof(LoginOutResult);
+		cmd = CMD_LOGINOUT_RESULT;
 		result = 0;
 	}
 	int result;
 };
-struct NewUserJoin : public DataHeader          //新用户加入
+//新客户端加入
+struct NewUserJoin : public DataHeader
 {
 	NewUserJoin()
 	{
 		dataLength = sizeof(NewUserJoin);
 		cmd = CMD_NEW_USER_JOIN;
-		scok = 0;
+		sock = 0;
 	}
-	int scok;
+	int sock;
 };
+#endif //!_MessageHeader_hpp_
+
